@@ -30,6 +30,9 @@
 #include "gazebo/transport/transport.hh"
 #include "gazebo/msgs/msgs.hh"
 
+#include "ros/ros.h"
+#include <sensor_msgs/Imu.h>
+
 #include "common.h"
 
 namespace gazebo {
@@ -150,5 +153,18 @@ class GazeboImuPlugin : public ModelPlugin {
   ImuParameters imu_parameters_;
 
   uint64_t seq_ = 0;
+
+  //ROS variables
+
+  /// \brief A node use for ROS transport
+  std::unique_ptr<ros::NodeHandle> _rosNode;
+
+  /// \brief A ROS publisher
+  ros::Publisher _pubRos;
+
+  double _ros_pub_period = 0;
+
+  void publishToRos(const sensor_msgs::msgs::Imu &imu_msg);
+
 };
 }

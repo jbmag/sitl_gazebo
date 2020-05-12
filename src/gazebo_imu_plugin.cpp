@@ -37,6 +37,7 @@ GazeboImuPlugin::GazeboImuPlugin()
 
 GazeboImuPlugin::~GazeboImuPlugin() {
   updateConnection_->~Connection();
+  this->_rosNode->shutdown();
 }
 
 
@@ -66,6 +67,9 @@ void GazeboImuPlugin::Load(physics::ModelPtr _model, sdf::ElementPtr _sdf) {
 
   frame_id_ = link_name_;
 
+  getSdfParam<double>(_sdf, "updatePeriod",
+                      _ros_pub_period,
+                      _ros_pub_period);
   getSdfParam<std::string>(_sdf, "imuTopic", imu_topic_, kDefaultImuTopic);
   getSdfParam<double>(_sdf, "gyroscopeNoiseDensity",
                       imu_parameters_.gyroscope_noise_density,
@@ -182,6 +186,21 @@ void GazeboImuPlugin::Load(physics::ModelPtr _model, sdf::ElementPtr _sdf) {
   // TODO(nikolicj) incorporate steady-state covariance of bias process
   gyroscope_bias_.setZero();
   accelerometer_bias_.setZero();
+
+  // Initialize ROS
+  if (!ros::isInitialized())
+  {
+    int argc = 0;
+    char **argv = NULL;
+    ros::init(argc, argv, "imu_from_gazebo",
+        ros::init_options::NoSigintHandler);
+  }
+  // Create ROS node
+  this->_rosNode.reset(new ros::NodeHandle("imu_from_gazebo"));
+
+  // Create publisher
+  this->_pubRos = this->_rosNode->advertise<sensor_msgs::Imu>("/IMU0",10);
+
 }
 
 /// \brief This function adds noise to acceleration and angular rates for
@@ -327,6 +346,41 @@ void GazeboImuPlugin::OnUpdate(const common::UpdateInfo& _info) {
   imu_message_.set_allocated_angular_velocity(angular_velocity);
 
   imu_pub_->Publish(imu_message_);
+
+  // check if imu msg should be published to ros
+  if (_ros_pub_period == 0) GazeboImuPlugin::publishToRos(imu_message_);
+  else
+  {
+#if (GAZEBO_MAJOR_VERSION >= 8)
+      double step = world_->Physics()->GetMaxStepSize();
+#else
+      double step = world_->GetPhysicsEngine()->GetMaxStepSize();
+#endif
+#if (GAZEBO_MAJOR_VERSION >= 8)
+      double fraction = fmod((world_->SimTime()).Double() + (step / 2.0), _ros_pub_period);
+#else
+      double fraction = fmod((world_->GetSimTime()).Double() + (step / 2.0), _ros_pub_period);
+#endif
+      if((fraction >= 0.0) && (fraction < step)) GazeboImuPlugin::publishToRos(imu_message_);
+  }
+
+
+}
+
+void GazeboImuPlugin::publishToRos(const sensor_msgs::msgs::Imu &imu_msg){
+  sensor_msgs::Imu out_msg;
+  out_msg.linear_acceleration.x = imu_msg.linear_acceleration().x();
+  out_msg.linear_acceleration.y = imu_msg.linear_acceleration().y();
+  out_msg.linear_acceleration.z = imu_msg.linear_acceleration().z();
+
+  out_msg.angular_velocity.x = imu_msg.angular_velocity().x();
+  out_msg.angular_velocity.y = imu_msg.angular_velocity().y();
+  out_msg.angular_velocity.z = imu_msg.angular_velocity().z();
+
+  out_msg.header.stamp = ros::Time(imu_msg.time_usec()*pow(10,-6));
+
+  _pubRos.publish(out_msg);
+
 }
 
 

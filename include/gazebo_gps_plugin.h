@@ -47,6 +47,9 @@
 #include <SITLGps.pb.h>
 #include <Groundtruth.pb.h>
 
+#include "ros/ros.h"
+#include <geometry_msgs/PoseWithCovarianceStamped.h>
+
 namespace gazebo
 {
 class GAZEBO_VISIBLE GpsPlugin : public ModelPlugin
@@ -138,6 +141,15 @@ private:
   static constexpr double gps_z_noise_density = 4e-4;     // (m) / sqrt(hz)
   static constexpr double gps_vxy_noise_density = 2e-1;   // (m/s) / sqrt(hz)
   static constexpr double gps_vz_noise_density = 4e-1;    // (m/s) / sqrt(hz)
+
+  // members use for ros
+  /// \brief A node use for ROS transport
+  std::unique_ptr<ros::NodeHandle> _rosNode;
+
+  /// \brief A ROS publisher
+  ros::Publisher _pubRos;
+
+  void publishToRos(const sensor_msgs::msgs::SITLGps &gps_msg);
 };     // class GAZEBO_VISIBLE GpsPlugin
 }      // namespace gazebo
 #endif // _GAZEBO_GPS_PLUGIN_HH_

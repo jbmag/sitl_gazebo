@@ -36,6 +36,7 @@ GpsPlugin::~GpsPlugin()
 {
     if (updateConnection_)
       updateConnection_->~Connection();
+    this->_rosNode->shutdown();
 }
 
 bool GpsPlugin::checkWorldHomePosition(physics::WorldPtr world) {
@@ -136,6 +137,20 @@ void GpsPlugin::Load(physics::ModelPtr _model, sdf::ElementPtr _sdf)
 
   gps_pub_ = node_handle_->Advertise<sensor_msgs::msgs::SITLGps>("~/" + model_->GetName() + "/gps", 10);
   gt_pub_ = node_handle_->Advertise<sensor_msgs::msgs::Groundtruth>("~/" + model_->GetName() + "/groundtruth", 10);
+
+  // Initialize ROS
+  if (!ros::isInitialized())
+  {
+    int argc = 0;
+    char **argv = NULL;
+    ros::init(argc, argv, "gps_from_gazebo",
+        ros::init_options::NoSigintHandler);
+  }
+  // Create ROS node
+  this->_rosNode.reset(new ros::NodeHandle("gps_from_gazebo"));
+
+  // Create publisher
+  this->_pubRos = this->_rosNode->advertise<geometry_msgs::PoseWithCovarianceStamped>("/GPS0",10);
 }
 
 void GpsPlugin::OnUpdate(const common::UpdateInfo&){
@@ -242,6 +257,8 @@ void GpsPlugin::OnUpdate(const common::UpdateInfo&){
     }
     // publish SITLGps msg at 5hz
     gps_pub_->Publish(gps_msg);
+    // publish also to ros
+    GpsPlugin::publishToRos(gps_msg);
   }
 
   // fill Groundtruth msg
@@ -279,4 +296,28 @@ std::pair<double, double> GpsPlugin::reproject(ignition::math::Vector3d& pos)
 
   return std::make_pair (lat_rad, lon_rad);
 }
+
+void GpsPlugin::publishToRos(const sensor_msgs::msgs::SITLGps &gps_msg)
+{
+  double heading = atan2(gps_msg.velocity_north(), gps_msg.velocity_east());
+
+  geometry_msgs::PoseWithCovarianceStamped out_msg;
+  out_msg.header.frame_id = "position in geodetic coordinates";
+  out_msg.header.stamp = ros::Time(gps_msg.time_usec()*pow(10,-6));
+  out_msg.pose.pose.position.x = gps_msg.latitude_deg();
+  out_msg.pose.pose.position.y = gps_msg.longitude_deg();
+  out_msg.pose.pose.position.z = gps_msg.altitude();  
+  
+  out_msg.pose.pose.orientation.w = cos( heading/2.0 );
+  out_msg.pose.pose.orientation.x = 0.0;
+  out_msg.pose.pose.orientation.y = 0.0;
+  out_msg.pose.pose.orientation.z = sin( heading/2.0 );
+  
+  //TODO: no information on covariance of gps measurement from gazebo, here initialized manually
+  //maybe use dop
+  out_msg.pose.covariance.assign(0);
+  
+  _pubRos.publish(out_msg);
+}
+
 } // namespace gazebo
