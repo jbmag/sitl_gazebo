@@ -146,10 +146,13 @@ private:
   /// \brief A node use for ROS transport
   std::unique_ptr<ros::NodeHandle> _rosNode;
 
-  /// \brief A ROS publisher
+  /// \brief ROS publisher for GPS measurement
   ros::Publisher _pubRos;
+/// \brief ROS publisher for ground truth
+  ros::Publisher _pubRosGT;
 
   void publishToRos(const sensor_msgs::msgs::SITLGps &gps_msg);
+  void publishToRosGT(const sensor_msgs::msgs::Groundtruth &groundtruth_msg);
 };     // class GAZEBO_VISIBLE GpsPlugin
 }      // namespace gazebo
 #endif // _GAZEBO_GPS_PLUGIN_HH_

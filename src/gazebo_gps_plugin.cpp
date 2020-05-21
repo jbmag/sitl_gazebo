@@ -151,6 +151,7 @@ void GpsPlugin::Load(physics::ModelPtr _model, sdf::ElementPtr _sdf)
 
   // Create publisher
   this->_pubRos = this->_rosNode->advertise<geometry_msgs::PoseWithCovarianceStamped>("GPS0",10);
+  this->_pubRosGT = this->_rosNode->advertise<geometry_msgs::PoseWithCovarianceStamped>("groundtruth_position",10);
 }
 
 void GpsPlugin::OnUpdate(const common::UpdateInfo&){
@@ -272,7 +273,8 @@ void GpsPlugin::OnUpdate(const common::UpdateInfo&){
 
   // publish Groundtruth msg at full rate
   gt_pub_->Publish(groundtruth_msg);
-
+  // pbulish also to ros
+  GpsPlugin::publishToRosGT(groundtruth_msg);
   last_time_ = current_time;
 }
 
@@ -318,6 +320,29 @@ void GpsPlugin::publishToRos(const sensor_msgs::msgs::SITLGps &gps_msg)
   out_msg.pose.covariance.assign(0);
   
   _pubRos.publish(out_msg);
+}
+
+void GpsPlugin::publishToRosGT(const sensor_msgs::msgs::Groundtruth &groundtruth_msg)
+{
+  // double heading = atan2(groundtruth_msg.velocity_north(), groundtruth_msg.velocity_east());
+
+  geometry_msgs::PoseWithCovarianceStamped out_msg;
+  out_msg.header.frame_id = "ground truth position in geodetic coordinates";
+  out_msg.header.stamp = ros::Time(groundtruth_msg.time_usec()*pow(10,-6));
+  out_msg.pose.pose.position.x = groundtruth_msg.latitude_rad();
+  out_msg.pose.pose.position.y = groundtruth_msg.longitude_rad();
+  out_msg.pose.pose.position.z = groundtruth_msg.altitude();  
+  
+  // out_msg.pose.pose.orientation.w = cos( heading/2.0 );
+  // out_msg.pose.pose.orientation.x = 0.0;
+  // out_msg.pose.pose.orientation.y = 0.0;
+  // out_msg.pose.pose.orientation.z = sin( heading/2.0 );
+  
+  //TODO: no information on covariance of gps measurement from gazebo, here initialized manually
+  //maybe use dop
+  out_msg.pose.covariance.assign(0);
+  
+  _pubRosGT.publish(out_msg);
 }
 
 } // namespace gazebo
