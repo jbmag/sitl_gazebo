@@ -196,10 +196,10 @@ void GazeboImuPlugin::Load(physics::ModelPtr _model, sdf::ElementPtr _sdf) {
         ros::init_options::NoSigintHandler);
   }
   // Create ROS node
-  this->_rosNode.reset(new ros::NodeHandle("imu_from_gazebo"));
+  this->_rosNode.reset(new ros::NodeHandle("imu_gazebo"));
 
   // Create publisher
-  this->_pubRos = this->_rosNode->advertise<sensor_msgs::Imu>("/IMU0",10);
+  this->_pubRos = this->_rosNode->advertise<sensor_msgs::Imu>("IMU0",10);
 
 }
 

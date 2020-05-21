@@ -143,14 +143,14 @@ void GpsPlugin::Load(physics::ModelPtr _model, sdf::ElementPtr _sdf)
   {
     int argc = 0;
     char **argv = NULL;
-    ros::init(argc, argv, "gps_from_gazebo",
+    ros::init(argc, argv, "gps_gazebo",
         ros::init_options::NoSigintHandler);
   }
   // Create ROS node
-  this->_rosNode.reset(new ros::NodeHandle("gps_from_gazebo"));
+  this->_rosNode.reset(new ros::NodeHandle("gps_gazebo"));
 
   // Create publisher
-  this->_pubRos = this->_rosNode->advertise<geometry_msgs::PoseWithCovarianceStamped>("/GPS0",10);
+  this->_pubRos = this->_rosNode->advertise<geometry_msgs::PoseWithCovarianceStamped>("GPS0",10);
 }
 
 void GpsPlugin::OnUpdate(const common::UpdateInfo&){

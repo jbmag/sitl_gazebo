@@ -605,6 +605,7 @@
       <robotNamespace></robotNamespace>
       <linkName>plane/imu_link</linkName>
       <imuTopic>/imu</imuTopic>
+      <updatePeriod>0.005</updatePeriod>
       <gyroscopeNoiseDensity>0.0003394</gyroscopeNoiseDensity>
       <gyroscopeRandomWalk>3.8785e-05</gyroscopeRandomWalk>
       <gyroscopeBiasCorrelationTime>1000.0</gyroscopeBiasCorrelationTime>
