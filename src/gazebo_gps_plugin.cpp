@@ -168,6 +168,7 @@ void GpsPlugin::OnUpdate(const common::UpdateInfo&){
   ignition::math::Pose3d T_W_I = ignitionFromGazeboMath(model_->GetWorldPose());    // TODO(burrimi): Check tf
 #endif
   ignition::math::Vector3d& pos_W_I = T_W_I.Pos();           // Use the models' world position for GPS and groundtruth
+  ignition::math::Quaterniond C_W_I = T_W_I.Rot();           // Use the models' world orientation for groundtruth
 
   // reproject position without noise into geographic coordinates
   auto latlon_gt = reproject(pos_W_I);
@@ -270,6 +271,10 @@ void GpsPlugin::OnUpdate(const common::UpdateInfo&){
   groundtruth_msg.set_velocity_east(velocity_current_W.X());
   groundtruth_msg.set_velocity_north(velocity_current_W.Y());
   groundtruth_msg.set_velocity_up(velocity_current_W.Z());
+  groundtruth_msg.set_attitude_q_w(C_W_I.W());
+  groundtruth_msg.set_attitude_q_x(C_W_I.X());
+  groundtruth_msg.set_attitude_q_y(C_W_I.Y());
+  groundtruth_msg.set_attitude_q_z(C_W_I.Z());
 
   // publish Groundtruth msg at full rate
   gt_pub_->Publish(groundtruth_msg);
@@ -329,14 +334,14 @@ void GpsPlugin::publishToRosGT(const sensor_msgs::msgs::Groundtruth &groundtruth
   geometry_msgs::PoseWithCovarianceStamped out_msg;
   out_msg.header.frame_id = "ground truth position in geodetic coordinates";
   out_msg.header.stamp = ros::Time(groundtruth_msg.time_usec()*pow(10,-6));
-  out_msg.pose.pose.position.x = groundtruth_msg.latitude_rad();
-  out_msg.pose.pose.position.y = groundtruth_msg.longitude_rad();
+  out_msg.pose.pose.position.x = groundtruth_msg.latitude_rad()* 180.0 / M_PI;
+  out_msg.pose.pose.position.y = groundtruth_msg.longitude_rad()* 180.0 / M_PI;
   out_msg.pose.pose.position.z = groundtruth_msg.altitude();  
   
-  // out_msg.pose.pose.orientation.w = cos( heading/2.0 );
-  // out_msg.pose.pose.orientation.x = 0.0;
-  // out_msg.pose.pose.orientation.y = 0.0;
-  // out_msg.pose.pose.orientation.z = sin( heading/2.0 );
+  out_msg.pose.pose.orientation.w = groundtruth_msg.attitude_q_w();
+  out_msg.pose.pose.orientation.x = groundtruth_msg.attitude_q_x();
+  out_msg.pose.pose.orientation.y = groundtruth_msg.attitude_q_y();
+  out_msg.pose.pose.orientation.z = groundtruth_msg.attitude_q_z();
   
   //TODO: no information on covariance of gps measurement from gazebo, here initialized manually
   //maybe use dop
