@@ -162,7 +162,7 @@ class GazeboImuPlugin : public ModelPlugin {
   /// \brief A ROS publisher
   ros::Publisher _pubRos;
 
-  double _ros_pub_period = 0;
+  double _ros_pub_period = 0.004;
 
   void publishToRos(const sensor_msgs::msgs::Imu &imu_msg);
 
